@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <title>View Registrations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'sans': ['PT Sans', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'Noto Sans', 'sans-serif']
+          },
+          colors: {
+            custom: {
+              'background': 'hsl(210, 10%, 15%)',
+              'card': 'hsl(210, 10%, 18%)', 
+              'primary': 'hsl(210, 45%, 60%)',
+              'secondary': 'hsl(210, 10%, 25%)',
+              'muted': 'hsl(210, 10%, 25%)',
+              'border': 'hsl(210, 10%, 30%)',
+              'input': 'hsl(210, 10%, 28%)',
+              'foreground': 'hsl(210, 10%, 85%)'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="font-sans flex flex-col items-center justify-start min-h-screen py-10" style="background-color: hsl(210, 10%, 15%)">
+
+  <div id="message" class="absolute top-10 left-1/2 transform -translate-x-1/2 w-96 z-50 pointer-events-none"></div>
+
+  <div class="card w-11/12 max-w-5xl p-6 shadow-2xl rounded-2xl animate-border-glow" style="background-color: hsl(210, 10%, 18%)">
+    <h2 class="text-2xl font-bold text-center mb-6" style="color: hsl(210, 10%, 85%)">All Registrations</h2>
+
+    <div class="flex justify-between mb-4">
+      <button id="exportBtn" class="py-2 px-4 font-medium rounded-lg shadow-lg transition-colors hover:opacity-90" style="background-color: hsl(210, 45%, 60%); color: hsl(210, 10%, 85%)">
+        Export CSV
+      </button>
+      <button id="deleteSelectedBtn" class="py-2 px-4 font-medium rounded-lg shadow-lg transition-colors hover:opacity-90" style="background-color: hsl(0, 70%, 50%); color: hsl(210, 10%, 85%)">
+        Delete Selected
+      </button>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="min-w-full table-auto border-collapse">
+        <thead>
+          <tr style="background-color: hsl(210, 10%, 25%); color: hsl(210, 10%, 85%)">
+            <th class="px-4 py-2 font-semibold" style="border: 1px solid hsl(210, 10%, 30%)">#</th>
+            <th class="px-4 py-2 font-semibold" style="border: 1px solid hsl(210, 10%, 30%)">Select</th>
+            <th class="px-4 py-2 font-semibold" style="border: 1px solid hsl(210, 10%, 30%)">Name</th>
+            <th class="px-4 py-2 font-semibold" style="border: 1px solid hsl(210, 10%, 30%)">Email</th>
+            <th class="px-4 py-2 font-semibold" style="border: 1px solid hsl(210, 10%, 30%)">Date</th>
+            <th class="px-4 py-2 font-semibold" style="border: 1px solid hsl(210, 10%, 30%)">Actions</th>
+          </tr>
+        </thead>
+                        <tbody id="tableBody" class="font-normal" style="color: hsl(210, 10%, 85%)"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Global array to store current registrations for notification purposes
+    let currentRegistrations = [];
+
+    // Notification function
+    const showMessage = (type, text) => {
+      const message = document.getElementById('message');
+      let bgColor, textColor;
+      const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : '🗑️';
+
+      if(type === 'success') {
+        bgColor = '#10b981'; // green background
+        textColor = '#f8fafc'; // light text
+      } else if(type === 'error') {
+        bgColor = '#ef4444'; // red background
+        textColor = '#f8fafc'; // light text
+      } else if(type === 'delete') {
+        bgColor = '#f59e0b'; // amber background
+        textColor = '#0f172a'; // dark text
+      }
+      
+      message.innerHTML = `
+        <div class="alert-popup flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg animate-float-in" style="background-color: ${bgColor}; color: ${textColor};">
+          <span class="text-lg">${icon}</span>
+          <span>${text}</span>
+        </div>
+      `;
+
+      const alertDiv = message.querySelector('.alert-popup');
+
+      setTimeout(() => {
+        alertDiv.classList.remove('animate-float-in');
+        alertDiv.classList.add('animate-float-out');
+      }, 4000);
+
+      setTimeout(() => { message.innerHTML = ''; }, 4300);
+    };
+
+    async function loadRegistrations() {
+      try {
+        const res = await fetch('http://localhost:3000/registrations');
+        const data = await res.json();
+        currentRegistrations = data; // Store for notification purposes
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = "";
+
+        data.forEach((r, index) => {
+          const row = document.createElement('tr');
+          
+          // Format the date to a more readable format
+          const formattedDate = new Date(r.date).toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+          });
+
+          row.innerHTML = `
+            <td class="px-4 py-2 text-center" style="border: 1px solid hsl(210, 10%, 30%)">${index+1}</td>
+            <td class="px-4 py-2 text-center" style="border: 1px solid hsl(210, 10%, 30%)">
+              <input type="checkbox" class="select-checkbox" data-index="${index}">
+            </td>
+            <td class="px-4 py-2" style="border: 1px solid hsl(210, 10%, 30%)">${r.name}</td>
+            <td class="px-4 py-2" style="border: 1px solid hsl(210, 10%, 30%)">${r.email}</td>
+            <td class="px-4 py-2" style="border: 1px solid hsl(210, 10%, 30%)">${formattedDate}</td>
+            <td class="px-4 py-2 text-center" style="border: 1px solid hsl(210, 10%, 30%)">
+              <button class="deleteBtn py-1 px-2 rounded font-medium transition-colors hover:opacity-90" style="background-color: hsl(0, 70%, 50%); color: hsl(210, 10%, 85%)" data-index="${index}">Delete</button>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+
+        // Attach delete handlers after table is created
+        document.querySelectorAll('.deleteBtn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const index = parseInt(btn.getAttribute('data-index'));
+            const regToDelete = currentRegistrations[index];
+            await deleteRegistrations([index], [regToDelete]);
+          });
+        });
+      } catch (err) {
+        console.error("Failed to load registrations:", err);
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="6" class="text-center py-4">Failed to load registrations</td></tr>`;
+      }
+    }
+
+    async function deleteRegistrations(indexes, registrationsToDelete = []) {
+      try {
+        await fetch('http://localhost:3000/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ indexes })
+        });
+        
+        // Show notification about deleted registrations
+        if (registrationsToDelete.length === 1) {
+          const reg = registrationsToDelete[0];
+          showMessage('delete', `Deleted: ${reg.name} (${reg.email}) - ID: ${reg.id}`);
+        } else if (registrationsToDelete.length > 1) {
+          showMessage('delete', `Deleted ${registrationsToDelete.length} registrations`);
+        }
+        
+        // Add delay before refreshing to allow user to read the notification
+        setTimeout(() => {
+          loadRegistrations(); // refresh table after notification is visible
+        }, 5000); // 5 second delay
+      } catch (err) {
+        console.error("Failed to delete registrations:", err);
+        showMessage('error', 'Failed to delete registration(s)');
+      }
+    }
+
+    // Delete selected
+    document.getElementById('deleteSelectedBtn').addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll('.select-checkbox:checked');
+      const indexes = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-index')));
+      if(indexes.length > 0) {
+        const registrationsToDelete = indexes.map(index => currentRegistrations[index]);
+        deleteRegistrations(indexes, registrationsToDelete);
+      }
+    });
+
+    // Export CSV
+    document.getElementById('exportBtn').addEventListener('click', async () => {
+      try {
+        const res = await fetch('http://localhost:3000/registrations');
+        const data = await res.json();
+        let csv = "Index,Name,Email,Date\n";
+        data.forEach((r, i) => csv += `${i+1},${r.name},${r.email},${r.date}\n`);
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'registrations.csv';
+        a.click();
+      } catch (err) {
+        console.error("Failed to export CSV:", err);
+      }
+    });
+
+    loadRegistrations();
+  </script>
+
+  <style>
+    body { 
+      background: hsl(210, 10%, 15%);
+      font-family: 'PT Sans', ui-sans-serif, system-ui, sans-serif;
+    }
+    @keyframes float-in {
+      0% { opacity: 0; transform: translateY(-10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-float-in { animation: float-in 0.3s ease forwards; }
+
+    @keyframes float-out {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-10px); }
+    }
+    .animate-float-out { animation: float-out 0.3s ease forwards; }
+
+    @keyframes border-glow {
+      0% { border-color: hsla(210, 45%, 60%, 0.3); }
+      50% { border-color: hsla(210, 45%, 60%, 0.8); }
+      100% { border-color: hsla(210, 45%, 60%, 0.3); }
+    }
+    .animate-border-glow {
+      border-width: 2px;
+      border-style: solid;
+      border-color: hsla(210, 45%, 60%, 0.3);
+      animation: border-glow 5s infinite;
+    }
+  </style>
+</body>
+</html>
