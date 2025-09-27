@@ -1,4 +1,4 @@
-# SIGCHI Task
+# Registration Page
 
 This repository contains a Node.js project for managing user registrations. It includes a simple server, HTML views, and JSON files for storing registration data.
 
@@ -33,6 +33,4 @@ This repository contains a Node.js project for managing user registrations. It i
 
 - Node.js (v14 or higher recommended)
 
-## License
 
-This project is licensed under the MIT License.
